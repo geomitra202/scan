@@ -2,13 +2,18 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Nearest Bluetooth Device Scanner</title>
+  <title>Closest Bluetooth Device</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #f5f5f5;
-      text-align: center;
+      background: #eef2f5;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
       padding: 50px;
+    }
+    h1 {
+      color: #333;
     }
     button {
       padding: 12px 24px;
@@ -18,27 +23,28 @@
       border: none;
       border-radius: 8px;
       cursor: pointer;
+      margin-top: 20px;
     }
     button:hover {
       background-color: #0056b3;
     }
     #status {
-      margin-top: 20px;
+      margin-top: 30px;
       font-size: 18px;
-      color: #333;
+      color: #444;
     }
     #device {
       margin-top: 10px;
       font-weight: bold;
       font-size: 20px;
-      color: #2c3e50;
+      color: #1a202c;
     }
   </style>
 </head>
 <body>
-  <h1>Scan Nearest Bluetooth Device</h1>
-  <button onclick="scanNearest()">🔍 Scan</button>
-  <div id="status">Click the button to start scanning.</div>
+  <h1>Scan for Closest Bluetooth Device</h1>
+  <button onclick="scanNearest()">🔍 Start Scan</button>
+  <div id="status">Waiting for scan...</div>
   <div id="device"></div>
 
   <script>
@@ -46,46 +52,41 @@
       const status = document.getElementById("status");
       const deviceDisplay = document.getElementById("device");
 
+      status.textContent = "Scanning for 5 seconds...";
       deviceDisplay.textContent = "";
-      status.textContent = "🔄 Scanning for nearby Bluetooth devices...";
 
       try {
-        const foundDevices = new Map();
+        const foundDevices = [];
 
-        // Start BLE scan (requires experimental feature enabled)
         const scan = await navigator.bluetooth.requestLEScan({
           acceptAllAdvertisements: true
         });
 
-        // Listen for advertisement events
-        navigator.bluetooth.addEventListener("advertisementreceived", event => {
+        navigator.bluetooth.addEventListener('advertisementreceived', event => {
           const name = event.device.name || event.name || "Unnamed";
           const rssi = event.rssi;
 
-          foundDevices.set(name, { name, rssi });
+          foundDevices.push({ name, rssi });
         });
 
-        // Stop scan after 5 seconds
         setTimeout(() => {
           scan.stop();
 
-          if (foundDevices.size === 0) {
-            status.textContent = "⚠️ No nearby Bluetooth devices found.";
+          if (foundDevices.length === 0) {
+            status.textContent = "❌ No devices found nearby.";
             return;
           }
 
-          // Get the closest device (highest RSSI)
-          const nearest = Array.from(foundDevices.values()).reduce((a, b) =>
-            a.rssi > b.rssi ? a : b
-          );
+          // Get device with highest RSSI (strongest signal = closest)
+          const nearest = foundDevices.reduce((a, b) => (a.rssi > b.rssi ? a : b));
 
-          status.textContent = "✅ Scan complete!";
-          deviceDisplay.textContent = `Nearest Device: ${nearest.name} (RSSI: ${nearest.rssi})`;
+          status.textContent = "✅ Closest device found:";
+          deviceDisplay.textContent = `${nearest.name} (RSSI: ${nearest.rssi})`;
 
         }, 5000);
 
       } catch (error) {
-        status.textContent = "❌ Error: " + error.message;
+        status.textContent = `❌ Error: ${error.message}`;
         deviceDisplay.textContent = "";
       }
     }
