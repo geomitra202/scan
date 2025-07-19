@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Nearest Bluetooth Device Scanner</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      text-align: center;
+      padding: 50px;
+    }
+    button {
+      padding: 12px 24px;
+      font-size: 16px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    #status {
+      margin-top: 20px;
+      font-size: 18px;
+      color: #333;
+    }
+    #device {
+      margin-top: 10px;
+      font-weight: bold;
+      font-size: 20px;
+      color: #2c3e50;
+    }
+  </style>
+</head>
+<body>
+  <h1>Scan Nearest Bluetooth Device</h1>
+  <button onclick="scanNearest()">🔍 Scan</button>
+  <div id="status">Click the button to start scanning.</div>
+  <div id="device"></div>
+
+  <script>
+    async function scanNearest() {
+      const status = document.getElementById("status");
+      const deviceDisplay = document.getElementById("device");
+
+      deviceDisplay.textContent = "";
+      status.textContent = "🔄 Scanning for nearby Bluetooth devices...";
+
+      try {
+        const foundDevices = new Map();
+
+        // Start BLE scan (requires experimental feature enabled)
+        const scan = await navigator.bluetooth.requestLEScan({
+          acceptAllAdvertisements: true
+        });
+
+        // Listen for advertisement events
+        navigator.bluetooth.addEventListener("advertisementreceived", event => {
+          const name = event.device.name || event.name || "Unnamed";
+          const rssi = event.rssi;
+
+          foundDevices.set(name, { name, rssi });
+        });
+
+        // Stop scan after 5 seconds
+        setTimeout(() => {
+          scan.stop();
+
+          if (foundDevices.size === 0) {
+            status.textContent = "⚠️ No nearby Bluetooth devices found.";
+            return;
+          }
+
+          // Get the closest device (highest RSSI)
+          const nearest = Array.from(foundDevices.values()).reduce((a, b) =>
+            a.rssi > b.rssi ? a : b
+          );
+
+          status.textContent = "✅ Scan complete!";
+          deviceDisplay.textContent = `Nearest Device: ${nearest.name} (RSSI: ${nearest.rssi})`;
+
+        }, 5000);
+
+      } catch (error) {
+        status.textContent = "❌ Error: " + error.message;
+        deviceDisplay.textContent = "";
+      }
+    }
+  </script>
+</body>
+</html>
